@@ -50,7 +50,7 @@ def get_tweets_per_topic(topic,year,month,day,number_of_tweets):
     auth.set_access_token(api_key['access_key'], api_key['access_secret'])
     api = tw.API(auth)
     #geo_code can be a parameter
-    tweets = tw.Cursor(api.search,
+    tweets = tw.Cursor(api.search_tweets,
               q=topic,
               lang="en",
               since=year+'-'+month+'-'+day, ).items(number_of_tweets)
@@ -85,7 +85,7 @@ def get_tweets_dataframe(topics,year,month,day,number_of_tweets):
     api = tw.API(auth)
     #geo_code can be a parameter
     for k, topic in enumerate(topics):
-        tweets = tw.Cursor(api.search,
+        tweets = tw.Cursor(api.search_tweets,
                 q=topic,
                 lang="en",
                 since=year+'-'+month+'-'+day, ).items(number_of_tweets)
