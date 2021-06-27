@@ -3,6 +3,8 @@
 import json
 import sys
 import csv
+import pandas as pd
+import numpy as np
 
 #http://www.tweepy.org/
 import tweepy as tw
@@ -10,7 +12,7 @@ import tweepy as tw
 #Get your Twitter API credentials and enter them here
 api_key = json.load(open('credentials.json'))
 #method to get a user's last tweets
-def get_tweets(username):
+def get_tweets(username, number_of_tweets):
     # identification
 	auth = tw.OAuthHandler(api_key['consumer_key'], api_key['consumer_secret'])
 	auth.set_access_token(api_key['access_key'], api_key['access_secret'])
@@ -18,7 +20,7 @@ def get_tweets(username):
     #it hits a rate limityou should instantiate the API with sleep_on_rate_limit=True
 
 	#set count to however many tweets you want 
-	number_of_tweets = 20
+	number_of_tweets = number_of_tweets
     
 	#get tweets
 	tweets_for_csv = []
@@ -41,33 +43,68 @@ def get_tweets_per_topic(topic,year,month,day,number_of_tweets):
     args : topic, year, month , day are Strings, number_of_tweets is an int
     year is like '2020', 'month' is among ['01',...'12'], same for days
     """
+    #Giving nb of rows to pre-allocate and be memory efficient
+    df = pd.DataFrame(index=np.arange(0, number_of_tweets), columns=['id', 'date', 'text'])
 
     auth = tw.OAuthHandler(api_key['consumer_key'], api_key['consumer_secret'])
     auth.set_access_token(api_key['access_key'], api_key['access_secret'])
     api = tw.API(auth)
     #geo_code can be a parameter
-    tweets = tw.Cursor(api.search_tweets,
+    tweets = tw.Cursor(api.search,
               q=topic,
               lang="en",
               since=year+'-'+month+'-'+day, ).items(number_of_tweets)
     # results = tw.cursor()
     # results = api.search_tweets(keywords="vacation", limit=10)
     tweets_topics_csv = []
-    for tweet in tweets:
-        tweets_topics_csv.append([tweet.id_str, tweet.created_at, tweet.text.encode("utf-8")])
+    for i, tweet in enumerate(tweets):
+        #tweets_topics_csv.append([tweet.id_str, tweet.created_at, tweet.text.encode("utf-8")])
+        df.loc[i] = [tweet.id_str, tweet.created_at, tweet.text]
 
-    outfile = topic + "_tweets.csv"
-    print ("writing to " + outfile)
+    #outfile = topic + "_tweets.csv"
+    #print ("writing to " + outfile)
 
-    with open(outfile, 'w+') as file:
-	    writer = csv.writer(file, delimiter=',')
-	    writer.writerows(tweets_topics_csv)
+    # with open(outfile, 'w+') as file:
+	#     writer = csv.writer(file, delimiter=',')
+	#     writer.writerows(tweets_topics_csv)
+    
+    #df.to_csv("df_euro.csv", index=False)
+
+    return df
+
+def get_tweets_dataframe(topics,year,month,day,number_of_tweets):
+    """
+    args : topics, year, month , day are Strings, number_of_tweets is an int
+    year is like '2020', 'month' is among ['01',...'12'], same for days
+    """
+    #Giving nb of rows to pre-allocate and be memory efficient
+    df = pd.DataFrame(index=np.arange(0, len(topics) * number_of_tweets), columns=['id', 'date', 'text'])
+
+    auth = tw.OAuthHandler(api_key['consumer_key'], api_key['consumer_secret'])
+    auth.set_access_token(api_key['access_key'], api_key['access_secret'])
+    api = tw.API(auth)
+    #geo_code can be a parameter
+    for k, topic in enumerate(topics):
+        tweets = tw.Cursor(api.search,
+                q=topic,
+                lang="en",
+                since=year+'-'+month+'-'+day, ).items(number_of_tweets)
+    
+        for i, tweet in enumerate(tweets):
+            df.loc[k*number_of_tweets + i] = [tweet.id_str, tweet.created_at, tweet.text]
+
+    return df
 
 #if we're running this as a script
 if __name__ == '__main__':
     # #alternative method: loop through multiple users
 	# # users = ['user1','user2']
-    get_tweets('joebiden')
-    get_tweets_per_topic("plane","2021","05","01",20)
-	# for user in users:
-	# 	get_tweets(user)
+    number_of_tweets = 2
+    #who = 'joebiden'
+    #get_tweets(who, number_of_tweets)
+
+    topics = ["euro2021", "festival", "holidays"]
+    #full_df = pd.DataFrame(index=np.arange(0, number_of_tweets * len(topics)), columns=['id', 'date', 'text'])
+    full_df = get_tweets_dataframe(topics, "2021","06","25",number_of_tweets)
+
+    full_df.to_csv("full_df.csv", index=False)
