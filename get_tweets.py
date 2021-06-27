@@ -72,6 +72,25 @@ def get_tweets_per_topic(topic,year,month,day,number_of_tweets):
 
     return df
 
+def get_tweets_from_people(usernames,number_of_tweets):
+    """
+    args : topics, year, month , day are Strings, number_of_tweets is an int
+    year is like '2020', 'month' is among ['01',...'12'], same for days
+    """
+    #Giving nb of rows to pre-allocate and be memory efficient
+    df = pd.DataFrame(index=np.arange(0, len(usernames) * number_of_tweets), columns=['id', 'date', 'text'])
+    auth = tw.OAuthHandler(api_key['consumer_key'], api_key['consumer_secret'])
+    auth.set_access_token(api_key['access_key'], api_key['access_secret'])
+    api = tw.API(auth)
+    #geo_code can be a parameter
+    for k, username in enumerate(usernames):
+        tweets = tw.Cursor(api.user_timeline, screen_name = username).items(number_of_tweets)
+    
+        for i, tweet in enumerate(tweets):
+            df.loc[k*number_of_tweets + i] = [tweet.user.name, tweet.created_at, tweet.text]
+
+    return df
+
 def get_tweets_dataframe(topics,year,month,day,number_of_tweets):
     """
     args : topics, year, month , day are Strings, number_of_tweets is an int
@@ -91,9 +110,23 @@ def get_tweets_dataframe(topics,year,month,day,number_of_tweets):
                 since=year+'-'+month+'-'+day, ).items(number_of_tweets)
     
         for i, tweet in enumerate(tweets):
-            df.loc[k*number_of_tweets + i] = [tweet.id_str, tweet.created_at, tweet.text]
+            df.loc[k*number_of_tweets + i] = [tweet.id_str, tweet.user.name, tweet.created_at, tweet.text]
 
     return df
+
+def list_manip():
+    auth = tw.OAuthHandler(api_key['consumer_key'], api_key['consumer_secret'])
+    auth.set_access_token(api_key['access_key'], api_key['access_secret'])
+    api = tw.API(auth)
+
+    #my_list = api.create_list(name="influenceurs")    # id  1409134672387481600
+    
+    #api.add_list_members(list_id=1409134672387481600, screen_name=['stevenbjohnson', 'SecretLocDining', 'Malaytravelblog'])
+    #for tweet in tw.Cursor(api.list_timeline, list_id=1409134672387481600, count=1, include_entities=False, include_rts=False).items(10):
+    for tweet in tw.Cursor(api.user_timeline, screen_name = 'Malaytravelblog').items(4):
+        print(tweet.user.screen_name)
+        print(tweet.text)
+        print("")
 
 #if we're running this as a script
 if __name__ == '__main__':
@@ -103,8 +136,19 @@ if __name__ == '__main__':
     #who = 'joebiden'
     #get_tweets(who, number_of_tweets)
 
-    topics = ["euro2021", "festival", "holidays"]
+    #topics = ["euro2021", "festival", "holidays"]
     #full_df = pd.DataFrame(index=np.arange(0, number_of_tweets * len(topics)), columns=['id', 'date', 'text'])
-    full_df = get_tweets_dataframe(topics, "2021","06","25",number_of_tweets)
+    #full_df = get_tweets_dataframe(topics, "2021","06","25",number_of_tweets)
 
-    full_df.to_csv("full_df.csv", index=False)
+    
+    file = open("influenceurs.json", "r")
+    data = json.loads(file.read())
+    sample_usernames = data['brain food']
+    sample = sample_usernames[:3]
+    print(sample)
+
+    full_df = get_tweets_from_people(sample, 2)
+
+    full_df.to_csv("full_df_influenceurs.csv", index=False)
+
+    file.close()
