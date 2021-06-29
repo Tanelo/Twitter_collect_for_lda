@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import json
+from logging import raiseExceptions
 import sys
 import csv
 import pandas as pd
@@ -104,10 +105,12 @@ def get_tweets_dataframe(topics,year,month,day,number_of_tweets):
     api = tw.API(auth)
     #geo_code can be a parameter
     for k, topic in enumerate(topics):
-        tweets = tw.Cursor(api.search,
-                q=topic,
-                lang="en",
-                since=year+'-'+month+'-'+day, ).items(number_of_tweets)
+        try:
+            tweets = tw.Cursor(api.search,
+                    q=topic,
+                    lang="en",
+                    since=year+'-'+month+'-'+day, ).items(number_of_tweets)
+        except: raiseExceptions("person not found")
     
         for i, tweet in enumerate(tweets):
             df.loc[k*number_of_tweets + i] = [tweet.id_str, tweet.user.name, tweet.created_at, tweet.text]
@@ -132,7 +135,7 @@ def list_manip():
 if __name__ == '__main__':
     # #alternative method: loop through multiple users
 	# # users = ['user1','user2']
-    number_of_tweets = 2
+    number_of_tweets = 30
     #who = 'joebiden'
     #get_tweets(who, number_of_tweets)
 
@@ -141,14 +144,15 @@ if __name__ == '__main__':
     #full_df = get_tweets_dataframe(topics, "2021","06","25",number_of_tweets)
 
     
-    file = open("influenceurs.json", "r")
+    file = open("dict.json", "r")
     data = json.loads(file.read())
-    sample_usernames = data['brain food']
-    sample = sample_usernames[:3]
-    print(sample)
-
-    full_df = get_tweets_from_people(sample, 2)
-
-    full_df.to_csv("full_df_influenceurs.csv", index=False)
-
+    topics = list(data.keys())
+    for topic in topics:
+        if topic != "travel_blog": #we have a problem with travel_blog
+            
+            print(topic)
+            full_df = get_tweets_from_people(data[topic],40)
+            full_df.to_csv("full_df"+str(topic)+'.csv', index=False)
     file.close()
+    #ok trop de requete -> recommencer ) après fashionistat , cad newspaper 
+    #et rechercher à nouveau pour ["brain_food","foodies","travel","travel_mag"] car 30 pas assez
