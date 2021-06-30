@@ -21,7 +21,7 @@ def get_tweets(username, number_of_tweets):
     #it hits a rate limityou should instantiate the API with sleep_on_rate_limit=True
 
 	#set count to however many tweets you want 
-	number_of_tweets = number_of_tweets
+	number_of_tweets
     
 	#get tweets
 	tweets_for_csv = []
@@ -75,8 +75,6 @@ def get_tweets_per_topic(topic,year,month,day,number_of_tweets):
 
 def get_tweets_from_people(usernames,number_of_tweets):
     """
-    args : topics, year, month , day are Strings, number_of_tweets is an int
-    year is like '2020', 'month' is among ['01',...'12'], same for days
     """
     #Giving nb of rows to pre-allocate and be memory efficient
     df = pd.DataFrame(index=np.arange(0, len(usernames) * number_of_tweets), columns=['id', 'date', 'text'])
@@ -148,7 +146,7 @@ if __name__ == '__main__':
     data = json.loads(file.read())
     topics = list(data.keys())
     for topic in topics:
-        if topic =="socialmedia_divas": #we have a problem with travel_blog
+        if topic =="tech_companies": #we have a problem with travel_blog
             
             print(topic)
             full_df = get_tweets_from_people(data[topic],30)
