@@ -148,11 +148,14 @@ if __name__ == '__main__':
     data = json.loads(file.read())
     topics = list(data.keys())
     for topic in topics:
-        if topic != "travel_blog": #we have a problem with travel_blog
+        if topic =="socialmedia_divas": #we have a problem with travel_blog
             
             print(topic)
-            full_df = get_tweets_from_people(data[topic],40)
+            full_df = get_tweets_from_people(data[topic],30)
+            
             full_df.to_csv("full_df"+str(topic)+'.csv', index=False)
+            #faire à partir de tech_companies
+            #Api dépassée
     file.close()
     #ok trop de requete -> recommencer ) après fashionistat , cad newspaper 
     #et rechercher à nouveau pour ["brain_food","foodies","travel","travel_mag"] car 30 pas assez
