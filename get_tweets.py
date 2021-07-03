@@ -11,7 +11,7 @@ import numpy as np
 import tweepy as tw
 
 #Get your Twitter API credentials and enter them here
-api_key = json.load(open('credentials.json'))
+api_key = json.load(open('credentials.json'))["second_key"]
 #method to get a user's last tweets
 def get_tweets(username, number_of_tweets):
     # identification
@@ -149,7 +149,7 @@ if __name__ == '__main__':
         if topic =="tech_companies": #we have a problem with travel_blog
             
             print(topic)
-            full_df = get_tweets_from_people(data[topic],30)
+            full_df = get_tweets_from_people(data[topic],20)
             
             full_df.to_csv("full_df"+str(topic)+'.csv', index=False)
             #faire à partir de tech_companies
