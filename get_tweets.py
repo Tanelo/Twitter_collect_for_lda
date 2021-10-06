@@ -9,8 +9,15 @@ import numpy as np
 #http://www.tweepy.org/
 import tweepy as tw
 
+# The fields you can select on tweets are found here : 
+# https://developer.twitter.com/en/docs/twitter-api/v1/data-dictionary/object-model/tweet
+
+# The fields you can select on users are found here : 
+# https://developer.twitter.com/en/docs/twitter-api/v1/data-dictionary/object-model/user
+
+
 #Get your Twitter API credentials and enter them here
-api_key = json.load(open('credentials.json'))
+api_key = json.load(open('credentials.json'))["second_key"]
 #method to get a user's last tweets
 def get_tweets(username, number_of_tweets):
     # identification
@@ -54,21 +61,10 @@ def get_tweets_per_topic(topic,year,month,day,number_of_tweets):
               q=topic,
               lang="en",
               since=year+'-'+month+'-'+day, ).items(number_of_tweets)
-    # results = tw.cursor()
-    # results = api.search_tweets(keywords="vacation", limit=10)
     tweets_topics_csv = []
     for i, tweet in enumerate(tweets):
         #tweets_topics_csv.append([tweet.id_str, tweet.created_at, tweet.text.encode("utf-8")])
         df.loc[i] = [tweet.id_str, tweet.created_at, tweet.text]
-
-    #outfile = topic + "_tweets.csv"
-    #print ("writing to " + outfile)
-
-    # with open(outfile, 'w+') as file:
-	#     writer = csv.writer(file, delimiter=',')
-	#     writer.writerows(tweets_topics_csv)
-    
-    #df.to_csv("df_euro.csv", index=False)
 
     return df
 
@@ -183,43 +179,51 @@ def test_query(username, number_of_tweets):
                     replies.append([str(comment.text), str(comment.user.name)])
     print(replies)
 
-def get_tweet(screen_name="Bitcoin", max = 100):
+def get_tweet_comments(screen_name="Bitcoin", number_of_tweets= 5):
+    #accessing to the number of replies is impossible
+    #we assume the number of retweets is close to the number of replies
+    #because generaly there differ from a factor of 1 to 9
+    """
+    args: 
+        screen_name : string, its the twitter unique tag of the account
+        number_of_tweets: integer, the number of most recent tweets we need
+
+    outputs:
+        tuple: (dict of tweets, dict of comments per tweet)
+    """
     auth = tw.OAuthHandler(api_key['consumer_key'], api_key['consumer_secret'])
     auth.set_access_token(api_key['access_key'], api_key['access_secret'])
     api = tw.API(auth,wait_on_rate_limit=True,
     )
     tweets_dict = {}
     replies = {}
-    for tweet in tw.Cursor(api.user_timeline, screen_name= screen_name,).items(1):
+
+
+    for tweet in tw.Cursor(api.user_timeline, screen_name= screen_name,).items(number_of_tweets):
         id = tweet.id
         retweet_count = tweet.retweet_count
         tweets_dict[id] = {
             "text": tweet.text,
             "username": tweet.user.screen_name,
-            # "is_quote_status": tweet.is_quote_status,
             "retweeted_status": retweet_count!=0,
             "retweet_count": retweet_count,
-            # "reply_count": tweet.reply_count,
             "entities": tweet.entities
         }
 
-        mini_dict = {}
+        tweet_comments_dict = {}
+
         for comment in tw.Cursor(api.search_tweets,q="to:"+screen_name, result_type='recent', ).items(retweet_count):
             
             if hasattr(comment, 'in_reply_to_status_id'):
                 if comment.in_reply_to_status_id!=None:
 
-                    # print(str(comment.in_reply_to_status_id)+" vs "+ str(id))
                     if (comment.in_reply_to_status_id==id):
-                        print("les tweets collent")
                         reply = {"text":comment.text, 
                         "username":comment.user.screen_name}
-                        mini_dict[comment.id] = reply
-        replies[id] = mini_dict
-        
-        
-
-    
+                        tweet_comments_dict[comment.id] = reply
+                        
+        tweet_comments_dict["number of retweets found"] = len(tweet_comments_dict.keys() )     
+        replies[id] = tweet_comments_dict
     
 
     return tweets_dict, replies
@@ -227,15 +231,7 @@ def get_tweet(screen_name="Bitcoin", max = 100):
 
 #if we're running this as a script
 if __name__ == '__main__':
-    # #alternative method: loop through multiple users
-	# # users = ['user1','user2']
     number_of_tweets = 50
-    #who = 'joebiden'
-    #get_tweets(who, number_of_tweets)
-
-    topics = ["euro2021", "festival", "holidays"]
-    #full_df = pd.DataFrame(index=np.arange(0, number_of_tweets * len(topics)), columns=['id', 'date', 'text'])
-    full_df = get_tweets_dataframe(topics, "2021","06","25",number_of_tweets)
 
     
     file = open("dict.json", "r")
@@ -252,7 +248,7 @@ if __name__ == '__main__':
     #     full_df.to_csv("df_on_"+str(topic)+'.csv', index=False)
     #         #Api dépassée
     # file.close()
-    got = get_tweet()
+    got = get_tweet_comments(number_of_tweets=1)
     my_dict = got[0]
     my_comments = got[1]
     print(my_comments)
