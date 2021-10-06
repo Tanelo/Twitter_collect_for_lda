@@ -72,8 +72,6 @@ def get_tweets_per_topic(topic,year,month,day,number_of_tweets):
 
     return df
 
-<<<<<<< Updated upstream
-=======
 def get_tweets_from_people(usernames,number_of_tweets):
     """
     """
@@ -136,28 +134,8 @@ def get_tweets_with_comments(usernames,number_of_tweets):
 
     return df
 
-def test_query(username, number_of_tweets):
-    auth = tw.OAuthHandler(api_key['consumer_key'], api_key['consumer_secret'])
-    auth.set_access_token(api_key['access_key'], api_key['access_secret'])
-    api = tw.API(auth,wait_on_rate_limit=True,
-    )
-
-    # tweets = tw.Cursor(api.user_timeline, screen_name = username).items(number_of_tweets)
-    name = str("NYU Stern")
-    tweet_id = 1442487073731190786
-    replies=[]
-    
-                    
-    for comment in tw.Cursor(api.search_tweets,q=name, result_type='recent', ).items(1000):
-        
-        if hasattr(comment, 'in_reply_to_status_id'):
-            print("on a trouvé")
-            if (comment.in_reply_to_status_id==tweet_id):
-                replies.append([str(comment.text), str(comment.user.name)])
-    print(replies)
 
 
->>>>>>> Stashed changes
 def get_tweets_dataframe(topics,year,month,day,number_of_tweets):
     """
     args : topics, year, month , day are Strings, number_of_tweets is an int
@@ -181,15 +159,77 @@ def get_tweets_dataframe(topics,year,month,day,number_of_tweets):
 
     return df
 
+def test_query(username, number_of_tweets):
+    auth = tw.OAuthHandler(api_key['consumer_key'], api_key['consumer_secret'])
+    auth.set_access_token(api_key['access_key'], api_key['access_secret'])
+    api = tw.API(auth,wait_on_rate_limit=True,
+    )
+
+    # tweets = tw.Cursor(api.user_timeline, screen_name = username).items(number_of_tweets)
+    name = str("NYU Stern")
+    tweet_id = 1442487073731190786
+    replies=[]
+    
+                    
+    for comment in tw.Cursor(api.search_tweets,q=name, result_type='recent', ).items(1000):
+        
+        if hasattr(comment, 'in_reply_to_status_id'):
+            print("on a trouvé")
+            if comment.in_reply_to_status_id!=None:
+
+                print(str(comment.in_reply_to_status_id)+" vs "+ str(tweet_id))
+                if (comment.in_reply_to_status_id==tweet_id):
+                    print("les tweets collent")
+                    replies.append([str(comment.text), str(comment.user.name)])
+    print(replies)
+
+def get_tweet(screen_name="Bitcoin", max = 100):
+    auth = tw.OAuthHandler(api_key['consumer_key'], api_key['consumer_secret'])
+    auth.set_access_token(api_key['access_key'], api_key['access_secret'])
+    api = tw.API(auth,wait_on_rate_limit=True,
+    )
+    tweets_dict = {}
+    replies = {}
+    for tweet in tw.Cursor(api.user_timeline, screen_name= screen_name,).items(1):
+        id = tweet.id
+        retweet_count = tweet.retweet_count
+        tweets_dict[id] = {
+            "text": tweet.text,
+            "username": tweet.user.screen_name,
+            # "is_quote_status": tweet.is_quote_status,
+            "retweeted_status": retweet_count!=0,
+            "retweet_count": retweet_count,
+            # "reply_count": tweet.reply_count,
+            "entities": tweet.entities
+        }
+
+        mini_dict = {}
+        for comment in tw.Cursor(api.search_tweets,q="to:"+screen_name, result_type='recent', ).items(retweet_count):
+            
+            if hasattr(comment, 'in_reply_to_status_id'):
+                if comment.in_reply_to_status_id!=None:
+
+                    # print(str(comment.in_reply_to_status_id)+" vs "+ str(id))
+                    if (comment.in_reply_to_status_id==id):
+                        print("les tweets collent")
+                        reply = {"text":comment.text, 
+                        "username":comment.user.screen_name}
+                        mini_dict[comment.id] = reply
+        replies[id] = mini_dict
+        
+        
+
+    
+    
+
+    return tweets_dict, replies
+
+
 #if we're running this as a script
 if __name__ == '__main__':
     # #alternative method: loop through multiple users
 	# # users = ['user1','user2']
-<<<<<<< Updated upstream
-    number_of_tweets = 2
-=======
     number_of_tweets = 50
->>>>>>> Stashed changes
     #who = 'joebiden'
     #get_tweets(who, number_of_tweets)
 
@@ -197,16 +237,14 @@ if __name__ == '__main__':
     #full_df = pd.DataFrame(index=np.arange(0, number_of_tweets * len(topics)), columns=['id', 'date', 'text'])
     full_df = get_tweets_dataframe(topics, "2021","06","25",number_of_tweets)
 
-<<<<<<< Updated upstream
-    full_df.to_csv("full_df.csv", index=False)
-=======
     
     file = open("dict.json", "r")
     data = json.loads(file.read())
     topics = list(data.keys())
-    new_df = get_tweets_with_comments(data[topics[-2]],10)
-    new_df.to_csv("good_df"+str(topics[-2])+'.csv', index=False)
+    # new_df = get_tweets_with_comments(data[topics[-2]],10)
+    # new_df.to_csv("good_df"+str(topics[-2])+'.csv', index=False)
     # test_query("NYU Stern",100)
+
     # for topic in topics:
             
     #     print("The topic scrapped is : "+ topic)
@@ -214,4 +252,9 @@ if __name__ == '__main__':
     #     full_df.to_csv("df_on_"+str(topic)+'.csv', index=False)
     #         #Api dépassée
     # file.close()
->>>>>>> Stashed changes
+    got = get_tweet()
+    my_dict = got[0]
+    my_comments = got[1]
+    print(my_comments)
+    # print(list(my_dict.values()))
+    
