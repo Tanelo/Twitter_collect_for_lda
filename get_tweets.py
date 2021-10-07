@@ -17,7 +17,7 @@ import tweepy as tw
 
 
 #Get your Twitter API credentials and enter them here
-api_key = json.load(open('credentials.json'))["second_key"]
+api_key = json.load(open('credentials.json'))["first_key"]
 #method to get a user's last tweets
 def get_tweets(username, number_of_tweets):
     # identification
@@ -76,7 +76,7 @@ def get_tweets_from_people(usernames,number_of_tweets):
     auth = tw.OAuthHandler(api_key['consumer_key'], api_key['consumer_secret'])
     auth.set_access_token(api_key['access_key'], api_key['access_secret'])
     api = tw.API(auth,wait_on_rate_limit=True,
-    wait_on_rate_limit_notify=True)
+   )
     #geo_code can be a parameter
     for k, username in enumerate(usernames):
         try: 
@@ -167,7 +167,7 @@ def test_query(username, number_of_tweets):
     replies=[]
     
                     
-    for comment in tw.Cursor(api.search_tweets,q=name, result_type='recent', ).items(1000):
+    for comment in tw.Cursor(api.search_tweets,q="to:"+name, result_type='recent', ).items(100):
         
         if hasattr(comment, 'in_reply_to_status_id'):
             print("on a trouvé")
@@ -179,7 +179,7 @@ def test_query(username, number_of_tweets):
                     replies.append([str(comment.text), str(comment.user.name)])
     print(replies)
 
-def get_tweet_comments(screen_name="Bitcoin", number_of_tweets= 5):
+def get_tweet_comments(screen_name="anne_sinclair", number_of_tweets= 5):
     #accessing to the number of replies is impossible
     #we assume the number of retweets is close to the number of replies
     #because generaly there differ from a factor of 1 to 9
@@ -198,45 +198,92 @@ def get_tweet_comments(screen_name="Bitcoin", number_of_tweets= 5):
     tweets_dict = {}
     replies = {}
 
+    #faire le edge case du tweet si c'est un retweet
 
     for tweet in tw.Cursor(api.user_timeline, screen_name= screen_name,).items(number_of_tweets):
-        id = tweet.id
-        retweet_count = tweet.retweet_count
-        tweets_dict[id] = {
-            "text": tweet.text,
-            "username": tweet.user.screen_name,
-            "retweeted_status": retweet_count!=0,
-            "retweet_count": retweet_count,
-            "entities": tweet.entities
-        }
+        try :
 
-        tweet_comments_dict = {}
+            if not (tweet.retweeted):
 
-        for comment in tw.Cursor(api.search_tweets,q="to:"+screen_name, result_type='recent', ).items(retweet_count):
-            
-            if hasattr(comment, 'in_reply_to_status_id'):
-                if comment.in_reply_to_status_id!=None:
+                id = tweet.id
+                retweet_count = tweet.retweet_count
+                tweets_dict[id] = {
+                    "text": tweet.text,
+                    "username": tweet.user.screen_name,
+                    "retweeted_status": retweet_count!=0,
+                    "retweet_count": retweet_count,
+                    "likes": tweet.favorite_count,
+                    # "entities": tweet.entities,
+                    
+                }
 
-                    if (comment.in_reply_to_status_id==id):
-                        reply = {"text":comment.text, 
-                        "username":comment.user.screen_name}
-                        tweet_comments_dict[comment.id] = reply
-                        
-        tweet_comments_dict["number of retweets found"] = len(tweet_comments_dict.keys() )     
-        replies[id] = tweet_comments_dict
+                tweet_comments_dict = {}
+                #it works better with "to"
+                for comment in tw.Cursor(api.search_tweets,q="to:"+screen_name, result_type='recent', ).items(retweet_count):
+                    
+                    if hasattr(comment, 'in_reply_to_status_id'):
+                        if comment.in_reply_to_status_id!=None:
+                            
+
+                            if (comment.in_reply_to_status_id==id):
+                                comment_count = comment.retweet_count
+                                reply = {
+                                        "tweet_id": id,
+                                        "text": comment.text,
+                                        "username": comment.user.screen_name,
+                                        "retweeted_status": comment_count!=0,
+                                        "retweet_count": comment_count,
+                                        "likes": comment.favorite_count,
+                                        # "entities":comment.entities,
+                                        }
+                                tweet_comments_dict[comment.id] = reply
+                            
+                tweet_comments_dict["number of replies found"] = len(tweet_comments_dict.keys() )     
+                replies[id] = tweet_comments_dict
+                tweets_dict[id]["comments"] = replies[id]
+        except:
+            pass
     
 
     return tweets_dict, replies
 
+def scrap_topic(topic="world_leaders"):
+        scrapped_tweets = get_tweet_comments(number_of_tweets=1)
+        comments_df = pd.DataFrame.from_dict(scrapped_tweets[1])
+        tweets_df = pd.DataFrame.from_dict(scrapped_tweets[0])
+        comments_df.to_excel('dataframes_for_recommenders_training/comments_df1.xlsx')
+        tweets_df.to_excel('dataframes_for_recommenders_training/tweets_df1.xlsx')
+
+        return comments_df, tweets_df
+
+def get_tweets_from(users = ["anne_sinclair"], name_of_the_list =""):
+    with open('tweets_and_comments'+name_of_the_list+'.json', 'w') as fp:
+        big_dict   = {
+        }
+        for user in users:
+            tweets_dict, comments_dict = get_tweet_comments(user, number_of_tweets=1)
+            big_dict[user] = {
+                "tweets_dict": tweets_dict,
+                "comments_dict": comments_dict,
+            }
+
+        json.dump(big_dict, fp)
 
 #if we're running this as a script
 if __name__ == '__main__':
-    number_of_tweets = 50
+    number_of_tweets = 40
+    
 
     
     file = open("dict.json", "r")
     data = json.loads(file.read())
     topics = list(data.keys())
+    
+    
+    # print(get_tweet_comments(number_of_tweets=1)[1])
+    get_tweets_from(data["entrepreneurs"],"entrepreneurs")
+
+    
     # new_df = get_tweets_with_comments(data[topics[-2]],10)
     # new_df.to_csv("good_df"+str(topics[-2])+'.csv', index=False)
     # test_query("NYU Stern",100)
@@ -244,13 +291,17 @@ if __name__ == '__main__':
     # for topic in topics:
             
     #     print("The topic scrapped is : "+ topic)
-    #     full_df = get_tweets_from_people(data[topic],number_of_tweets=number_of_tweets)
-    #     full_df.to_csv("df_on_"+str(topic)+'.csv', index=False)
-    #         #Api dépassée
+    """
+    to scrap people on precised fields
+    """
+    # full_df = get_tweets_from_people(data["entrepreneurs"],number_of_tweets=number_of_tweets)
+    # full_df.to_csv("df_on_"+str("entrepreneurs")+'.csv', index=False)
+    """
+    """
     # file.close()
-    got = get_tweet_comments(number_of_tweets=1)
-    my_dict = got[0]
-    my_comments = got[1]
-    print(my_comments)
+    # got = get_tweet_comments(number_of_tweets=1)
+    # my_dict = got[0]
+    # my_comments = got[1]
+    # print(my_comments)
     # print(list(my_dict.values()))
     
