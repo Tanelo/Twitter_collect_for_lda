@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import json
+from logging import raiseExceptions
 import sys
 import csv
 import pandas as pd
@@ -207,8 +208,10 @@ def get_tweet_comments(screen_name="anne_sinclair", number_of_tweets= 5):
 
                 id = tweet.id
                 retweet_count = tweet.retweet_count
-                tweets_dict[id] = {
+                tweets_dict[str(id)] = {
+                    "id": str(tweet.id),
                     "text": tweet.text,
+                    "date": str(tweet.created_at),
                     "username": tweet.user.screen_name,
                     "retweeted_status": retweet_count!=0,
                     "retweet_count": retweet_count,
@@ -218,6 +221,7 @@ def get_tweet_comments(screen_name="anne_sinclair", number_of_tweets= 5):
                 }
 
                 tweet_comments_dict = {}
+                comments_ids = []
                 #it works better with "to"
                 for comment in tw.Cursor(api.search_tweets,q="to:"+screen_name, result_type='recent', ).items(retweet_count):
                     
@@ -227,25 +231,29 @@ def get_tweet_comments(screen_name="anne_sinclair", number_of_tweets= 5):
 
                             if (comment.in_reply_to_status_id==id):
                                 comment_count = comment.retweet_count
+                                comments_ids.append(str(comment.id))
                                 reply = {
-                                        "tweet_id": id,
+                                        "tweet_id": str(id),
                                         "text": comment.text,
+                                        "date": str(comment.created_at),
                                         "username": comment.user.screen_name,
                                         "retweeted_status": comment_count!=0,
                                         "retweet_count": comment_count,
                                         "likes": comment.favorite_count,
                                         # "entities":comment.entities,
                                         }
-                                tweet_comments_dict[comment.id] = reply
+                                tweet_comments_dict[str(comment.id)] = reply
                             
                 tweet_comments_dict["number of replies found"] = len(tweet_comments_dict.keys() )     
-                replies[id] = tweet_comments_dict
-                tweets_dict[id]["comments"] = replies[id]
+                replies[str(id)] = tweet_comments_dict
+                tweets_dict[str(id)]["comments"] = replies[str(id)]
+                tweets_dict[str(id)]["comments_ids"]= comments_ids
         except:
             pass
     
 
     return tweets_dict, replies
+
 
 def scrap_topic(topic="world_leaders"):
         scrapped_tweets = get_tweet_comments(number_of_tweets=1)
@@ -256,18 +264,117 @@ def scrap_topic(topic="world_leaders"):
 
         return comments_df, tweets_df
 
-def get_tweets_from(users = ["anne_sinclair"], name_of_the_list =""):
-    with open('tweets_and_comments'+name_of_the_list+'.json', 'w') as fp:
-        big_dict   = {
-        }
+def get_tweets_from(users = ["anne_sinclair"], name_of_the_list ="anne_sinclair", isDf= True, number_of_tweets=1):
+    path = "df_for_training_recommenders/"
+    if isDf:
+        dfs_tweets = []
+        dfs_comments = []
+        dfs_fulls = []
         for user in users:
-            tweets_dict, comments_dict = get_tweet_comments(user, number_of_tweets=1)
-            big_dict[user] = {
-                "tweets_dict": tweets_dict,
-                "comments_dict": comments_dict,
-            }
+            tweets_dict, comments_dict = get_tweet_comments(user, number_of_tweets=number_of_tweets)
+            df_tweets = pd.DataFrame.from_dict(tweets_dict)
+            df_comments = pd.DataFrame.from_dict(comments_dict)
+            df_full = pd.concat([df_tweets,df_comments],axis=0)
+            dfs_tweets.append(df_tweets)
+            dfs_comments.append(df_comments)
+            dfs_fulls.append(df_full)
+            
+        dfs_tweets = pd.concat(dfs_tweets, axis=1).T
+        dfs_comments = pd.concat(dfs_comments, axis=1).T
+        dfs_fulls = pd.concat(dfs_fulls, axis=1).T
+        dfs_tweets.to_excel(path+"df_tweets"+"_"+name_of_the_list+'.xlsx')
+        dfs_comments.to_excel(path+"df_comments"+"_"+name_of_the_list+'.xlsx')
+        dfs_fulls.to_excel(path+"df_all"+"_"+name_of_the_list+'.xlsx')
+        dfs_tweets.to_csv(path+"df_tweets"+"_"+name_of_the_list+'.csv')
+        dfs_comments.to_csv(path+"df_comments"+"_"+name_of_the_list+'.csv')
+        dfs_fulls.to_csv(path+"df_all"+"_"+name_of_the_list+'.csv')
 
-        json.dump(big_dict, fp)
+            
+
+    else : 
+        with open('tweets_and_comments'+name_of_the_list+'.json', 'w') as fp:
+            big_dict   = {
+            }
+            for user in users:
+                tweets_dict, comments_dict = get_tweet_comments(user, number_of_tweets=1)
+                big_dict[user] = {
+                    "tweets_dict": tweets_dict,
+                    "comments_dict": comments_dict,
+                }
+
+            json.dump(big_dict, fp)
+
+
+def get_tweets_df(users= ["anne_sinclair"],number_of_tweets = 1, name_of_the_list ="anne_sinclair"):
+    auth = tw.OAuthHandler(api_key['consumer_key'], api_key['consumer_secret'])
+    auth.set_access_token(api_key['access_key'], api_key['access_secret'])
+    api = tw.API(auth,wait_on_rate_limit=True,
+    )
+    df_tweets = pd.DataFrame(index=np.arange(0, len(users) * number_of_tweets), columns=['id', 'username','date', 'text','retweeted_status','retweet_count','likes','comments'])
+    big_dict   = {
+        }
+    for i, user in enumerate(users):
+        try:
+        # tweets_dict, comments_dict = get_tweet_comments(user, number_of_tweets=1)
+            tweets = tw.Cursor(api.user_timeline, screen_name= user,).items(number_of_tweets)
+            for k, tweet in enumerate(tweets):
+                
+
+                    if not (tweet.retweeted):
+
+                        id = tweet.id
+                        retweet_count = tweet.retweet_count
+                        # tweets_dict[id] = {
+                        #     "id": tweet.id,
+                        #     "text": tweet.text,
+                        #     "date": tweet.created_at,
+                        #     "username": tweet.user.screen_name,
+                        #     "retweeted_status": retweet_count!=0,
+                        #     "retweet_count": retweet_count,
+                        #     "likes": tweet.favorite_count,
+                        #     # "entities": tweet.entities,
+                            
+                        # }
+
+                        tweet_comments_dict = {}
+                        #it works better with "to"
+                        for comment in tw.Cursor(api.search_tweets,q="to:"+user, result_type='recent', ).items(retweet_count):
+                            
+                            if hasattr(comment, 'in_reply_to_status_id'):
+                                if comment.in_reply_to_status_id!=None:
+                                    
+
+                                    if (comment.in_reply_to_status_id==id):
+                                        comment_count = comment.retweet_count
+                                        reply = {
+                                                "tweet_id": id,
+                                                "text": comment.text,
+                                                "date": comment.created_at,
+                                                "username": comment.user.screen_name,
+                                                "retweeted_status": comment_count!=0,
+                                                "retweet_count": comment_count,
+                                                "likes": comment.favorite_count,
+                                                # "entities":comment.entities,
+                                                }
+                                        tweet_comments_dict[comment.id] = reply
+                                    
+                        # tweet_comments_dict["number of replies found"] = len(tweet_comments_dict.keys() )     
+                        # replies[id] = tweet_comments_dict
+                        # tweets_dict[id]["comments"] = replies[id]
+                        #'id', 'username','date', 'text','retweeted_status','retweet_count','likes','comments'
+                        df_tweets.loc[i*number_of_tweets + k] = [tweet.id_str, tweet.user.screen_name,tweet.created_at, tweet.text, retweet_count!=0,tweet.favorite_count, tweet_comments_dict]
+        except:
+            
+            pass    
+
+    df_tweets.to_excel('df_tweets'+name_of_the_list+'.xlsx')
+    df_tweets.to_csv('df_tweets'+name_of_the_list+'.csv')
+
+        # for k, tweet in enumerate(tweets_dict.values()):
+
+            
+
+        
 
 #if we're running this as a script
 if __name__ == '__main__':
@@ -281,7 +388,9 @@ if __name__ == '__main__':
     
     
     # print(get_tweet_comments(number_of_tweets=1)[1])
-    get_tweets_from(data["entrepreneurs"],"entrepreneurs")
+    # get_tweets_from(data["entrepreneurs"],"entrepreneurs")
+    get_tweets_from(["anne_sinclair","leadlagreport"], "try", number_of_tweets=10)
+    # get_tweets_df()
 
     
     # new_df = get_tweets_with_comments(data[topics[-2]],10)
