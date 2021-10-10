@@ -256,6 +256,7 @@ def get_tweet_comments(screen_name="anne_sinclair", number_of_tweets= 5):
                 tweets_dict[str(id)]["comments_ids"]= comments_ids
                 
         except:
+            print("User not found, passing to next user")
             pass
     
 
@@ -326,6 +327,7 @@ def get_tweets_from(users = ["anne_sinclair"], name_of_the_list ="anne_sinclair"
 #if we're running this as a script
 if __name__ == '__main__':
     number_of_tweets = 40
+    #on peut scrapper environ 1000 tweets par 15min...
     
 
     
@@ -336,7 +338,13 @@ if __name__ == '__main__':
     
     # print(get_tweet_comments(number_of_tweets=1)[1])
     # get_tweets_from(data["entrepreneurs"],"entrepreneurs")
-    get_tweets_from(["anne_sinclair","leadlagreport"], "try", number_of_tweets=10)
+    # get_tweets_from(["anne_sinclair","leadlagreport"], "try", number_of_tweets=10)
+    l1 = ["was buxton","cydharrell","kimgoodwin","Draplin","frank_chimero",]
+    l2 = ["neiljcapel","travisk","GuyKawasaki","richardbranson",
+    "seanrad","pmarca","garyvee",]
+    get_tweets_from(data["designers"], "designers",number_of_tweets=2)
+    # get_tweets_from(l1, "designers",number_of_tweets=10)
+    # get_tweets_from(l2, "entrepreneurs",number_of_tweets=10)
     # get_tweets_df()
 
     
