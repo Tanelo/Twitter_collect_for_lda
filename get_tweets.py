@@ -225,7 +225,7 @@ def get_tweet_comments(screen_name="anne_sinclair", number_of_tweets= 5):
                 tweet_comments_dict = {}
                 comments_ids = []
                 #it works better with "to"
-                for comment in tw.Cursor(api.search_tweets,q="to:"+screen_name, result_type='recent', ).items(retweet_count):
+                for comment in tw.Cursor(api.search_tweets,q="to:"+screen_name, result_type='recent', ).items(max(30,retweet_count)):
                     
                     if hasattr(comment, 'in_reply_to_status_id'):
                         if comment.in_reply_to_status_id!=None:
@@ -250,9 +250,10 @@ def get_tweet_comments(screen_name="anne_sinclair", number_of_tweets= 5):
                                 tweet_comments_dict[str(comment.id)] = reply
                                 good_replies[str(comment.id)] = reply
                             
-                tweet_comments_dict["number of replies found"] = len(tweet_comments_dict.keys() )     
+                tweet_comments_dict[str(id)]["number of replies found"] = len(tweet_comments_dict.keys() )   
+                tweets_dict["number of replies found"] =    len(tweet_comments_dict.keys())
                 replies[str(id)] = tweet_comments_dict
-                tweets_dict[str(id)]["comments"] = replies[str(id)]
+                # tweets_dict[str(id)]["comments"] = replies[str(id)]
                 tweets_dict[str(id)]["comments_ids"]= comments_ids
                 
         except:
@@ -342,7 +343,10 @@ if __name__ == '__main__':
     l1 = ["was buxton","cydharrell","kimgoodwin","Draplin","frank_chimero",]
     l2 = ["neiljcapel","travisk","GuyKawasaki","richardbranson",
     "seanrad","pmarca","garyvee",]
-    get_tweets_from(data["designers"], "designers",number_of_tweets=2)
+    # get_tweets_from(data["entertainment"][15:], "entertainment",number_of_tweets=10)
+    get_tweets_from(data["thought_leaders"][15:], "entertainment",number_of_tweets=10)
+    #bon nombre 10 personnes à scrapper avec number_of_tweets = 10
+    #max par request
     # get_tweets_from(l1, "designers",number_of_tweets=10)
     # get_tweets_from(l2, "entrepreneurs",number_of_tweets=10)
     # get_tweets_df()
